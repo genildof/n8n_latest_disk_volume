@@ -1,19 +1,20 @@
 # ============================================================
-# n8n 2.83 + FFmpeg — Easypanel via GitHub
+# n8n (latest) + FFmpeg — Easypanel via GitHub
 # ============================================================
-# O Easypanel faz o build a partir do Dockerfile no repo.
-# NÃO use a chave "build:" aqui — o Easypanel injeta a imagem
-# buildada automaticamente quando o serviço é do tipo "App".
+# Easypanel:
+#   - Create Project → Service → App
+#   - Source: connect GitHub repo (Dockerfile + this file)
+#   - Domains: add your domain — Easypanel provisions SSL via Traefik
+#   - Environment: set N8N_HOST, WEBHOOK_URL, N8N_ENCRYPTION_KEY
 #
-# Volumes:
-#   n8n_data  → gerenciado pelo Easypanel (dados/credenciais)
-#   n8n_logs  → bind mount em /opt/n8n/logs no servidor host
-#               (crie a pasta antes: veja COMANDOS.md)
+# Before deploying, create the log folder on the host server:
+#   sudo mkdir -p /opt/n8n/logs/dark_video_errors
+#   sudo chown -R 1000:1000 /opt/n8n/logs
 # ============================================================
 
 services:
   n8n:
-    image: ${EASYPANEL_IMAGE:-n8n-ffmpeg:latest}   # preenchido pelo Easypanel no build
+    image: ${EASYPANEL_IMAGE:-n8n-ffmpeg:latest}
     container_name: n8n
     restart: unless-stopped
 
@@ -28,13 +29,16 @@ services:
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
       N8N_SECURE_COOKIE: "true"
 
-      # Task Runners — obrigatório no n8n 2.x para Code nodes com fs/child_process
+      # Task Runners — required on n8n 2.x for Code nodes using fs/child_process
       N8N_RUNNERS_ENABLED: "true"
       N8N_RUNNERS_MODE: "internal"
       NODE_FUNCTION_ALLOW_BUILTIN: "fs,child_process,os,path,buffer"
       NODE_FUNCTION_ALLOW_EXTERNAL: ""
 
-      # Binary data — in-memory foi removido no n8n 2.x
+      # ExecuteCommand node — disabled by default in n8n 2.x, re-enabled here
+      N8N_ALLOW_EXEC: "true"
+
+      # Binary data — in-memory mode removed in n8n 2.x
       N8N_DEFAULT_BINARY_DATA_MODE: "filesystem"
 
       DB_TYPE: "sqlite"
@@ -50,7 +54,7 @@ services:
 
     volumes:
       - n8n_data:/home/node/.n8n
-      - /opt/n8n/logs:/home/n8n/logs        # path fixo no servidor
+      - /opt/n8n/logs:/home/n8n/logs
 
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
