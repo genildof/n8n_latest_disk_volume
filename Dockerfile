@@ -7,7 +7,7 @@ FROM mwader/static-ffmpeg:6.0 AS ffmpeg-source
 # STAGE 2: n8n com FFmpeg embutido
 # Compatível com n8n 2.x (task runners internos)
 # ============================================================
-FROM docker.n8n.io/n8nio/n8n:2.83.0
+FROM docker.n8n.io/n8nio/n8n:latest
 
 USER root
 
