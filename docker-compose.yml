@@ -1,0 +1,64 @@
+# ============================================================
+# n8n 2.83 + FFmpeg — Easypanel via GitHub
+# ============================================================
+# O Easypanel faz o build a partir do Dockerfile no repo.
+# NÃO use a chave "build:" aqui — o Easypanel injeta a imagem
+# buildada automaticamente quando o serviço é do tipo "App".
+#
+# Volumes:
+#   n8n_data  → gerenciado pelo Easypanel (dados/credenciais)
+#   n8n_logs  → bind mount em /opt/n8n/logs no servidor host
+#               (crie a pasta antes: veja COMANDOS.md)
+# ============================================================
+
+services:
+  n8n:
+    image: ${EASYPANEL_IMAGE:-n8n-ffmpeg:latest}   # preenchido pelo Easypanel no build
+    container_name: n8n
+    restart: unless-stopped
+
+    ports:
+      - "5678:5678"
+
+    environment:
+      N8N_HOST: ${N8N_HOST}
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: "https"
+      WEBHOOK_URL: ${WEBHOOK_URL}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_SECURE_COOKIE: "true"
+
+      # Task Runners — obrigatório no n8n 2.x para Code nodes com fs/child_process
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_RUNNERS_MODE: "internal"
+      NODE_FUNCTION_ALLOW_BUILTIN: "fs,child_process,os,path,buffer"
+      NODE_FUNCTION_ALLOW_EXTERNAL: ""
+
+      # Binary data — in-memory foi removido no n8n 2.x
+      N8N_DEFAULT_BINARY_DATA_MODE: "filesystem"
+
+      DB_TYPE: "sqlite"
+
+      GENERIC_TIMEZONE: "America/Sao_Paulo"
+      TZ: "America/Sao_Paulo"
+
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "168"
+      EXECUTIONS_DATA_MAX_COUNT: "5000"
+
+      N8N_LOG_LEVEL: "info"
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - /opt/n8n/logs:/home/n8n/logs        # path fixo no servidor
+
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  n8n_data:
+    driver: local
